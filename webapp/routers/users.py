@@ -1,9 +1,7 @@
-from typing import List
-
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from webapp.dependencies import get_user_service
-from webapp.models import User, UserCreate, UserUpdate
+from webapp.models import PaginatedResponse, PaginationParams, User, UserCreate, UserUpdate
 from webapp.services.user_service import UserService
 
 router = APIRouter(prefix='/users', tags=['users'])
@@ -14,9 +12,25 @@ def create_user(data: UserCreate, service: UserService = Depends(get_user_servic
     return service.create(data)
 
 
-@router.get('', response_model=List[User])
-def list_users(service: UserService = Depends(get_user_service)):
-    return service.list()
+def get_pagination(
+    page: int = Query(1, ge=1, description='1-based page number', examples=[1]),
+    page_size: int = Query(20, ge=1, le=100, description='Items per page (max 100)', examples=[20]),
+) -> PaginationParams:
+    return PaginationParams(page=page, page_size=page_size)
+
+
+@router.get(
+    '',
+    response_model=PaginatedResponse[User],
+    summary='List users (paginated)',
+    description='Returns one page of users plus pagination metadata.',
+)
+def list_users(
+    params: PaginationParams = Depends(get_pagination),
+    service: UserService = Depends(get_user_service),
+):
+    items, total = service.list_page(params.page, params.page_size)
+    return PaginatedResponse[User].create(items, total, params)
 
 
 @router.get('/{user_id}', response_model=User)

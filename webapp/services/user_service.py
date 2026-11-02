@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from webapp.models import User, UserCreate, UserUpdate
 
@@ -25,6 +25,11 @@ class UserService:
 
     def list(self) -> List[User]:
         return [*self._users.values()]
+
+    def list_page(self, page: int, page_size: int) -> Tuple[List[User], int]:
+        users = self.list()
+        start = (page - 1) * page_size
+        return users[start:start + page_size], len(users)
 
     def update(self, user_id: int, data: UserUpdate) -> Optional[User]:
         user = self._users.get(user_id)
